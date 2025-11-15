@@ -62,4 +62,6 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation("com.google.android.gms:play-services-location:21.2.0")
+    implementation("androidx.compose.material:material-icons-extended:1.6.0")
 }
