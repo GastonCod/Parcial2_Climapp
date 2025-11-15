@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -16,6 +17,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "OWM_KEY", "\"${properties["OPEN_WEATHER_KEY"]}\"")
     }
 
     buildTypes {
@@ -36,14 +38,12 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
 dependencies {
-    // (lo que ya tenés de Compose)
     implementation("androidx.navigation:navigation-compose:2.8.3")
-
-    // Ktor (los dejamos listos; por ahora usamos mock)
     implementation("io.ktor:ktor-client-android:2.3.7")
     implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
@@ -64,4 +64,5 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation("com.google.android.gms:play-services-location:21.2.0")
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
+    implementation("io.ktor:ktor-client-logging:2.3.7")
 }

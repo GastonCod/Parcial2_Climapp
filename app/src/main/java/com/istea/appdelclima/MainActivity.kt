@@ -11,7 +11,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.istea.appdelclima.presentation.ciudades.*
 import com.istea.appdelclima.presentation.clima.*
-import com.istea.appdelclima.repository.RepositorioMock
+import com.istea.appdelclima.repository.RepositorioApi
 import com.istea.appdelclima.repository.modelos.Ciudad
 import com.istea.appdelclima.ui.theme.AppDelClimaTheme
 
@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
             AppDelClimaTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     val nav = rememberNavController()
-                    val repo = RepositorioMock()
+                    val repo = RepositorioApi()
 
                     val vmCities = remember { CiudadesViewModel(repo) }
                     val vmWeather = remember { ClimaViewModel(repo) }
