@@ -21,4 +21,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "Parcial2_Climapp"
 include(":app")
- 
