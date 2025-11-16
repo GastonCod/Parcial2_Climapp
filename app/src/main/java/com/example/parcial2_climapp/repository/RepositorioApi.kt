@@ -10,7 +10,6 @@ import io.ktor.client.call.body
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.HttpResponseValidator
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.DefaultRequest
 import io.ktor.client.plugins.logging.DEFAULT
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.plugins.logging.LogLevel
@@ -31,10 +30,6 @@ class RepositorioApi : Repositorio {
     private val client = HttpClient(Android) {
         install(ContentNegotiation) {
             json(Json { ignoreUnknownKeys = true })
-        }
-        // parametros globales (se agregan a TODAS las requests)
-        install(DefaultRequest) {
-
         }
         // logs de red en Logcat
         install(Logging) {
