@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,8 +14,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
@@ -28,10 +25,6 @@ import com.istea.appdelclima.repository.modelos.Ciudad
 import com.istea.appdelclima.ui.theme.azulFondo
 import com.istea.appdelclima.ui.theme.azulFondoComponentes
 import com.istea.appdelclima.ui.theme.grisFondo
-
-// -------------------------------------------------------------------------------------------------
-// MAIN VIEW
-// -------------------------------------------------------------------------------------------------
 
 @Composable
 fun CiudadesView(vm: CiudadesViewModel, onSeleccionar: (Ciudad) -> Unit) {
@@ -49,7 +42,6 @@ fun CiudadesView(vm: CiudadesViewModel, onSeleccionar: (Ciudad) -> Unit) {
                 .background(azulFondo)
                 .padding(top = 8.dp, bottom = 16.dp)
         ) {
-            // 🔥 NUEVA BARRA ESTÉTICA
             BarraBusqueda(
                 query = s.query,
                 onQueryChange = vm::onQueryChange,
@@ -85,6 +77,7 @@ fun CiudadesView(vm: CiudadesViewModel, onSeleccionar: (Ciudad) -> Unit) {
 
                     val isFirst = index == 0
                     val isLast = index == s.resultados.lastIndex
+                    val displayName = c.name
 
                     Card(
                         modifier = Modifier
@@ -105,16 +98,27 @@ fun CiudadesView(vm: CiudadesViewModel, onSeleccionar: (Ciudad) -> Unit) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 14.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
-                                Text(c.name, style = MaterialTheme.typography.titleMedium)
-                                c.country?.let {
-                                    Text(it, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                                }
-                            }
 
-                            Text("(${c.lat}, ${c.lon})", color = Color.Gray, fontSize = 12.sp)
+                            Text(
+                                text = countryCodeToFlagEmoji(c.country),
+                                fontSize = 32.sp,
+                                modifier = Modifier.padding(end = 12.dp)
+                            )
+
+                            Column {
+                                Text(
+                                    text = displayName,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+
+                                Text(
+                                    text = getCountryNameEs(c.country),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray
+                                )
+                            }
                         }
                     }
                 }
@@ -127,9 +131,6 @@ fun CiudadesView(vm: CiudadesViewModel, onSeleccionar: (Ciudad) -> Unit) {
     }
 }
 
-// -------------------------------------------------------------------------------------------------
-// CUSTOM SEARCH BAR ESTÉTICA
-// -------------------------------------------------------------------------------------------------
 
 @Composable
 fun BarraBusqueda(
@@ -147,7 +148,6 @@ fun BarraBusqueda(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // TEXTFIELD REDONDEADO
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -179,7 +179,6 @@ fun BarraBusqueda(
             )
         }
 
-        // BOTÓN DE GEO (IZQUIERDA)
         Box(
             modifier = Modifier
                 .size(50.dp)
@@ -197,10 +196,6 @@ fun BarraBusqueda(
     }
 }
 
-// -------------------------------------------------------------------------------------------------
-// GPS BUTTON LOGIC (USADO SOLO DESDE VM)
-// -------------------------------------------------------------------------------------------------
-
 @SuppressLint("MissingPermission")
 fun obtenerUbicacion(
     context: android.content.Context,
@@ -216,10 +211,6 @@ fun obtenerUbicacion(
         }
     }
 }
-
-// -------------------------------------------------------------------------------------------------
-// VM EXTENSION: llama gps → crea ciudad → navega
-// -------------------------------------------------------------------------------------------------
 
 fun CiudadesViewModel.buscarCiudadPorUbicacionDirecta(
     onSeleccionar: (Ciudad) -> Unit
@@ -237,10 +228,6 @@ fun CiudadesViewModel.buscarCiudadPorUbicacionDirecta(
     }
 }
 
-// -------------------------------------------------------------------------------------------------
-// NECESARIO PARA ACCEDER A CONTEXTO DESDE VM
-// -------------------------------------------------------------------------------------------------
-
 var CiudadesViewModel.currentContext: android.content.Context?
     get() = _ctx
     set(value) { _ctx = value }
@@ -255,21 +242,44 @@ fun ProvideContextToVM(vm: CiudadesViewModel) {
     }
 }
 
-// -------------------------------------------------------------------------------------------------
-// PREVIEW
-// -------------------------------------------------------------------------------------------------
+fun countryCodeToFlagEmoji(code: String?): String {
+    if (code.isNullOrBlank()) return "🏳️"
+    return code.uppercase()
+        .map { char -> Character.codePointAt(char.toString(), 0) - 0x41 + 0x1F1E6 }
+        .map { codePoint -> String(Character.toChars(codePoint)) }
+        .joinToString("")
+}
 
+fun getCountryNameEs(code: String?): String {
+    return when (code?.uppercase()) {
+        "AR" -> "Argentina"
+        "UY" -> "Uruguay"
+        "CL" -> "Chile"
+        "BR" -> "Brasil"
+        "PY" -> "Paraguay"
+        "BO" -> "Bolivia"
+        "PE" -> "Perú"
+        "MX" -> "México"
+        "US" -> "Estados Unidos"
+        "ES" -> "España"
+        "NL" -> "Países Bajos"
+        "IT" -> "Italia"
+        "FR" -> "Francia"
+        "DE" -> "Alemania"
+        else -> code ?: "Sin país"
+    }
+}
+
+
+// PREVIEW
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun PreviewCiudadesView() {
 
-    // Creamos el repo MOCK
     val mock = com.istea.appdelclima.repository.RepositorioMock()
 
-    // Creamos el ViewModel solo para preview (sin warning)
     val vm = remember { CiudadesViewModel(mock) }
 
-    // Cargamos datos ficticios
     vm.estado.value = CiudadesEstado(
         query = "Bue",
         resultados = listOf(

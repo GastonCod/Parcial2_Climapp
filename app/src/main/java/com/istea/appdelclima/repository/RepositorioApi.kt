@@ -54,7 +54,7 @@ class RepositorioApi : Repositorio {
     }
 
     // ---------------- DTOs de red ----------------
-    @Serializable private data class GeoCityDto(val name: String, val lat: Double, val lon: Double, val country: String? = null)
+    @Serializable private data class GeoCityDto(val name: String, val lat: Double, val lon: Double, val country: String? = null, val local_names: Map<String, String>? = null)
     @Serializable private data class Main(val temp: Double, val humidity: Int)
     @Serializable private data class Wx(val main: String, val description: String, val icon: String)
     @Serializable private data class CurrentDto(val name: String, val dt: Long, val main: Main, val weather: List<Wx>)
@@ -70,8 +70,18 @@ class RepositorioApi : Repositorio {
             parameter("appid", apiKey)
         }
         Log.d("OWM", "geocoding status=${resp.status}")
+
         val list: List<GeoCityDto> = resp.body()
-        return list.map { Ciudad(it.name, it.lat, it.lon, it.country) }
+
+        return list.map {
+            Ciudad(
+                name = it.name,
+                lat = it.lat,
+                lon = it.lon,
+                country = it.country,
+                localNames = it.local_names
+            )
+        }
     }
 
 

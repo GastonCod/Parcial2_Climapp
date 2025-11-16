@@ -4,5 +4,6 @@ data class Ciudad(
     val name: String,
     val lat: Double,
     val lon: Double,
-    val country: String? = null
+    val country: String? = null,
+    val localNames: Map<String, String>? = null
 )
