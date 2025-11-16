@@ -17,7 +17,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "OWM_KEY", "\"${properties["OPEN_WEATHER_KEY"]}\"")
+        buildConfigField("String", "OWM_BASE_URL", "\"${properties["OWM_BASE_URL"]}\"")
+        buildConfigField("String", "OWM_KEY", "\"${properties["OWM_KEY"]}\"")
     }
 
     buildTypes {

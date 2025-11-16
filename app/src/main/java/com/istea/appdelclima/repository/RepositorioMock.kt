@@ -29,4 +29,8 @@ class RepositorioMock : Repositorio {
             PronosticoDia("Pasado",  16.0, 24.0, "Rain")
         )
     }
+
+    override suspend fun ciudadPorUbicacion(lat: Double, lon: Double): Ciudad? {
+        return Ciudad("Ciudad Mock", lat, lon, "AR")
+    }
 }

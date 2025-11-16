@@ -27,22 +27,18 @@ import java.time.ZoneId
 class RepositorioApi : Repositorio {
 
     private val apiKey = BuildConfig.OWM_KEY
+    private val baseUrl = BuildConfig.OWM_BASE_URL
     private val units = "metric"
 
     private val client = HttpClient(Android) {
         install(ContentNegotiation) {
             json(Json { ignoreUnknownKeys = true })
         }
-        // parametros globales (se agregan a TODAS las requests)
-        install(DefaultRequest) {
-
-        }
-        // logs de red en Logcat
+        install(DefaultRequest)
         install(Logging) {
             logger = Logger.DEFAULT
             level = LogLevel.BODY
         }
-        // errores HTTP explícitos
         HttpResponseValidator {
             validateResponse { r ->
                 if (r.status.value >= 400) {
@@ -54,21 +50,30 @@ class RepositorioApi : Repositorio {
     }
 
     // ---------------- DTOs de red ----------------
-    @Serializable private data class GeoCityDto(val name: String, val lat: Double, val lon: Double, val country: String? = null, val local_names: Map<String, String>? = null)
+    @Serializable private data class GeoCityDto(
+        val name: String,
+        val lat: Double,
+        val lon: Double,
+        val country: String? = null,
+        val local_names: Map<String, String>? = null
+    )
+
     @Serializable private data class Main(val temp: Double, val humidity: Int)
     @Serializable private data class Wx(val main: String, val description: String, val icon: String)
     @Serializable private data class CurrentDto(val name: String, val dt: Long, val main: Main, val weather: List<Wx>)
     @Serializable private data class ForecastItem(val dt: Long, val main: Main, val weather: List<Wx>)
     @Serializable private data class ForecastDto(val list: List<ForecastItem>)
 
-    // --- Implementación
+    // --- Implementación ---
     override suspend fun buscarCiudades(q: String): List<Ciudad> {
         if (q.isBlank()) return emptyList()
-        val resp = client.get("https://api.openweathermap.org/geo/1.0/direct") {
+
+        val resp = client.get("${baseUrl}geo/1.0/direct") {
             parameter("q", q)
             parameter("limit", 10)
             parameter("appid", apiKey)
         }
+
         Log.d("OWM", "geocoding status=${resp.status}")
 
         val list: List<GeoCityDto> = resp.body()
@@ -84,16 +89,18 @@ class RepositorioApi : Repositorio {
         }
     }
 
-
     override suspend fun climaActual(lat: Double, lon: Double): ClimaActual {
-        val resp = client.get("https://api.openweathermap.org/data/2.5/weather") {
+        val resp = client.get("${baseUrl}data/2.5/weather") {
             parameter("lat", lat)
             parameter("lon", lon)
             parameter("units", units)
             parameter("appid", apiKey)
         }
+
         Log.d("OWM", "current status=${resp.status}")
+
         val dto: CurrentDto = resp.body()
+
         return ClimaActual(
             ciudad = dto.name,
             temperatura = dto.main.temp,
@@ -102,9 +109,8 @@ class RepositorioApi : Repositorio {
         )
     }
 
-
     override suspend fun pronostico(lat: Double, lon: Double): Pronostico {
-        val resp = client.get("https://api.openweathermap.org/data/2.5/forecast") {
+        val resp = client.get("${baseUrl}data/2.5/forecast") {
             parameter("lat", lat)
             parameter("lon", lon)
             parameter("units", units)
@@ -116,14 +122,21 @@ class RepositorioApi : Repositorio {
         val dto: ForecastDto = resp.body()
 
         val byDay = dto.list.groupBy {
-            Instant.ofEpochSecond(it.dt).atZone(ZoneId.systemDefault()).toLocalDate()
+            Instant.ofEpochSecond(it.dt)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
         }
 
         return byDay.entries.sortedBy { it.key }.map { (date, items) ->
             val min = items.minOf { it.main.temp }
             val max = items.maxOf { it.main.temp }
-            val estado = items.map { it.weather.firstOrNull()?.main.orEmpty() }
-                .groupingBy { it }.eachCount().maxBy { it.value }.key
+
+            val estado = items
+                .map { it.weather.firstOrNull()?.main.orEmpty() }
+                .groupingBy { it }
+                .eachCount()
+                .maxBy { it.value }
+                .key
 
             PronosticoDia(
                 dia = date.toString(),
@@ -132,5 +145,28 @@ class RepositorioApi : Repositorio {
                 estado = estado
             )
         }
+    }
+
+    override suspend fun ciudadPorUbicacion(lat: Double, lon: Double): Ciudad? {
+        val resp = client.get("${baseUrl}geo/1.0/reverse") {
+            parameter("lat", lat)
+            parameter("lon", lon)
+            parameter("limit", 1)
+            parameter("appid", apiKey)
+        }
+
+        Log.d("OWM", "reverse geocoding status=${resp.status}")
+
+        val list: List<GeoCityDto> = resp.body()
+
+        val dto = list.firstOrNull() ?: return null
+
+        return Ciudad(
+            name = dto.name,
+            lat = dto.lat,
+            lon = dto.lon,
+            country = dto.country,
+            localNames = dto.local_names
+        )
     }
 }

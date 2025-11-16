@@ -1,6 +1,5 @@
 package com.istea.appdelclima.presentation.ciudades
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,7 +19,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.android.gms.location.LocationServices
 import com.istea.appdelclima.repository.modelos.Ciudad
 import com.istea.appdelclima.ui.theme.azulFondo
 import com.istea.appdelclima.ui.theme.azulFondoComponentes
@@ -45,18 +43,19 @@ fun CiudadesView(vm: CiudadesViewModel, onSeleccionar: (Ciudad) -> Unit) {
             BarraBusqueda(
                 query = s.query,
                 onQueryChange = vm::onQueryChange,
-                onGeoClick = { vm.buscarCiudadPorUbicacionDirecta(onSeleccionar) } // usamos VM
+                onGeoClick = { vm.onClickGeo(onSeleccionar) }
             )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (s.cargando)
+        if (s.cargando) {
             LinearProgressIndicator(
                 Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
             )
+        }
 
         Card(
             modifier = Modifier
@@ -126,11 +125,14 @@ fun CiudadesView(vm: CiudadesViewModel, onSeleccionar: (Ciudad) -> Unit) {
         }
 
         s.error?.let {
-            Text("Error: $it", color = MaterialTheme.colorScheme.error)
+            Text(
+                text = "Error: $it",
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(16.dp)
+            )
         }
     }
 }
-
 
 @Composable
 fun BarraBusqueda(
@@ -196,44 +198,6 @@ fun BarraBusqueda(
     }
 }
 
-@SuppressLint("MissingPermission")
-fun obtenerUbicacion(
-    context: android.content.Context,
-    onFound: (Double, Double) -> Unit
-) {
-    val fused = LocationServices.getFusedLocationProviderClient(context)
-
-    fused.lastLocation.addOnSuccessListener { location ->
-        if (location != null) {
-            onFound(location.latitude, location.longitude)
-        } else {
-            println("No se pudo obtener ubicación")
-        }
-    }
-}
-
-fun CiudadesViewModel.buscarCiudadPorUbicacionDirecta(
-    onSeleccionar: (Ciudad) -> Unit
-) {
-    val context = currentContext ?: return
-
-    obtenerUbicacion(context) { lat, lon ->
-        val ciudadActual = Ciudad(
-            name = "Ubicación Actual",
-            lat = lat,
-            lon = lon,
-            country = "AR"
-        )
-        onSeleccionar(ciudadActual)
-    }
-}
-
-var CiudadesViewModel.currentContext: android.content.Context?
-    get() = _ctx
-    set(value) { _ctx = value }
-
-private var _ctx: android.content.Context? = null
-
 @Composable
 fun ProvideContextToVM(vm: CiudadesViewModel) {
     val ctx = LocalContext.current
@@ -246,8 +210,7 @@ fun countryCodeToFlagEmoji(code: String?): String {
     if (code.isNullOrBlank()) return "🏳️"
     return code.uppercase()
         .map { char -> Character.codePointAt(char.toString(), 0) - 0x41 + 0x1F1E6 }
-        .map { codePoint -> String(Character.toChars(codePoint)) }
-        .joinToString("")
+        .joinToString("") { codePoint -> String(Character.toChars(codePoint)) }
 }
 
 fun getCountryNameEs(code: String?): String {
@@ -267,34 +230,5 @@ fun getCountryNameEs(code: String?): String {
         "FR" -> "Francia"
         "DE" -> "Alemania"
         else -> code ?: "Sin país"
-    }
-}
-
-
-// PREVIEW
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun PreviewCiudadesView() {
-
-    val mock = com.istea.appdelclima.repository.RepositorioMock()
-
-    val vm = remember { CiudadesViewModel(mock) }
-
-    vm.estado.value = CiudadesEstado(
-        query = "Bue",
-        resultados = listOf(
-            Ciudad("Buenos Aires", -34.61, -58.38, "AR"),
-            Ciudad("Burzaco", -34.82, -58.39, "AR"),
-            Ciudad("Berazategui", -34.77, -58.21, "AR")
-        ),
-        cargando = false,
-        error = null
-    )
-
-    MaterialTheme {
-        CiudadesView(
-            vm = vm,
-            onSeleccionar = {}
-        )
     }
 }
