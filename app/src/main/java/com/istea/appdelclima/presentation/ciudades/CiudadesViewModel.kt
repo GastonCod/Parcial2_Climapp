@@ -5,13 +5,15 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.istea.appdelclima.repository.Repositorio
+import com.istea.appdelclima.repository.RepositorioPreferencias
 import com.istea.appdelclima.repository.modelos.Ciudad
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class CiudadesViewModel(
-    val repo: Repositorio
+    val repo: Repositorio,
+    private val repositorioPreferencias: RepositorioPreferencias
 ) : ViewModel() {
 
     var estado = androidx.compose.runtime.mutableStateOf(CiudadesEstado())
@@ -41,6 +43,12 @@ class CiudadesViewModel(
                         error = e.message ?: "Error buscando ciudades"
                     )
                 }
+        }
+    }
+
+    fun onCiudadSeleccionada(ciudad: Ciudad) {
+        viewModelScope.launch {
+            repositorioPreferencias.guardarCiudad(ciudad.name)
         }
     }
 

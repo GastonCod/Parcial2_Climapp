@@ -17,9 +17,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppDelClima">
         <activity
-            android:name=".MainActivity"
+            android:name="com.istea.appdelclima.MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.AppDelClima">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

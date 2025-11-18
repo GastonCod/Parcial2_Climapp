@@ -5,18 +5,27 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.core.app.ActivityCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.istea.appdelclima.presentation.ciudades.*
-import com.istea.appdelclima.presentation.clima.*
+import com.istea.appdelclima.presentation.ciudades.CiudadesView
+import com.istea.appdelclima.presentation.ciudades.CiudadesViewModel
+import com.istea.appdelclima.presentation.ciudades.ProvideContextToVM
+import com.istea.appdelclima.presentation.clima.ClimaView
+import com.istea.appdelclima.presentation.clima.ClimaViewModel
 import com.istea.appdelclima.repository.RepositorioApi
+import com.istea.appdelclima.repository.RepositorioPreferencias
 import com.istea.appdelclima.repository.modelos.Ciudad
 import com.istea.appdelclima.ui.theme.AppDelClimaTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.remember
+import kotlinx.coroutines.flow.first
 
 class MainActivity : ComponentActivity() {
 
@@ -28,27 +37,46 @@ class MainActivity : ComponentActivity() {
         setContent {
             AppDelClimaTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
-
                     val nav = rememberNavController()
                     val repo = RepositorioApi()
+                    val repositorioPreferencias = RepositorioPreferencias(this)
 
-                    val vmCities = remember { CiudadesViewModel(repo) }
+                    val vmCities = remember { CiudadesViewModel(repo, repositorioPreferencias) }
                     val vmWeather = remember { ClimaViewModel(repo) }
 
-                    NavHost(navController = nav, startDestination = "ciudades") {
+                    var startDestination by remember { mutableStateOf<String?>(null) }
 
-                        composable("ciudades") {
-                            ProvideContextToVM(vmCities)
-
-                            CiudadesView(vmCities) { ciudad: Ciudad ->
-                                vmWeather.cargarPara(ciudad)
-                                nav.navigate("clima")
+                    LaunchedEffect(Unit) {
+                        val ciudadGuardada = repositorioPreferencias.getCiudadGuardada().first()
+                        if (ciudadGuardada != null) {
+                            val ciudades = repo.buscarCiudades(ciudadGuardada)
+                            if (ciudades.isNotEmpty()) {
+                                vmWeather.cargarPara(ciudades.first())
+                                startDestination = "clima"
+                            } else {
+                                startDestination = "ciudades"
                             }
+                        } else {
+                            startDestination = "ciudades"
                         }
+                    }
 
-                        composable("clima") {
-                            ClimaView(vmWeather) {
-                                nav.popBackStack()
+                    if (startDestination != null) {
+                        NavHost(navController = nav, startDestination = startDestination!!) {
+                            composable("ciudades") {
+                                ProvideContextToVM(vmCities)
+
+                                CiudadesView(vmCities) { ciudad: Ciudad ->
+                                    vmCities.onCiudadSeleccionada(ciudad)
+                                    vmWeather.cargarPara(ciudad)
+                                    nav.navigate("clima")
+                                }
+                            }
+
+                            composable("clima") {
+                                ClimaView(vmWeather) {
+                                    nav.popBackStack()
+                                }
                             }
                         }
                     }
