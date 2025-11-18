@@ -4,28 +4,54 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.istea.appdelclima.repository.Repositorio
 import com.istea.appdelclima.repository.modelos.Ciudad
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class ClimaViewModel(private val repo: Repositorio) : ViewModel() {
-    var estado = androidx.compose.runtime.mutableStateOf(ClimaEstado())
-        private set
+class ClimaViewModel(
+    private val repo: Repositorio
+) : ViewModel() {
 
-    fun cargarPara(ciudad: Ciudad) {
-        estado.value = ClimaEstado(ciudad = ciudad, cargando = true)
+    private val _estado = MutableStateFlow(ClimaEstado())
+    val estado: StateFlow<ClimaEstado> = _estado.asStateFlow()
+
+    fun dispatch(intencion: ClimaIntencion) {
+        when (intencion) {
+            is ClimaIntencion.Cargar -> cargarPara(intencion.ciudad)
+        }
+    }
+
+    private fun cargarPara(ciudad: Ciudad) {
+        _estado.value = ClimaEstado(ciudad = ciudad, cargando = true)
+
         viewModelScope.launch {
-            runCatching {
+            try {
                 val now = repo.climaActual(ciudad.lat, ciudad.lon)
                 val list = repo.pronostico(ciudad.lat, ciudad.lon)
-                now to list
-            }.onSuccess { (now, list) ->
-                estado.value = estado.value.copy(
-                    cargando = false, 
-                    hoy = now, 
-                    dias = list,
-                    ciudad = estado.value.ciudad
-                )
-            }.onFailure {
-                estado.value = estado.value.copy(cargando = false, error = it.message)
+
+                _estado.update {
+                    it.copy(
+                        cargando = false,
+                        hoy = now,
+                        dias = list,
+                        ciudad = ciudad,
+                        error = null
+                    )
+                }
+                println(">>> Clima cargado OK")
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                println(">>> ERROR CARGANDO CLIMA: ${e.message}")
+
+                _estado.update {
+                    it.copy(
+                        cargando = false, // 👈 NECESARIO PARA QUE NO SE BLOQUEE LA UI
+                        error = e.message ?: "Error cargando clima"
+                    )
+                }
             }
         }
     }

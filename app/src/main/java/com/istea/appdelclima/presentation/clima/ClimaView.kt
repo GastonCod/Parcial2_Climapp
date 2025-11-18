@@ -21,8 +21,11 @@ import com.istea.appdelclima.repository.modelos.ClimaActual
 import com.istea.appdelclima.repository.modelos.PronosticoDia
 
 @Composable
-fun ClimaView(vm: ClimaViewModel, onCambiarCiudad: () -> Unit) {
-    val s by vm.estado
+fun ClimaView(
+    vm: ClimaViewModel,
+    onCambiarCiudad: () -> Unit
+) {
+    val s by vm.estado.collectAsState()
     val context = LocalContext.current
 
     Column(
@@ -57,12 +60,14 @@ fun ClimaView(vm: ClimaViewModel, onCambiarCiudad: () -> Unit) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- INDICADOR DE CARGA ---
         if (s.cargando) {
-            CircularProgressIndicator(modifier = Modifier.size(50.dp))
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(50.dp)
+                    .padding(16.dp)
+            )
         }
 
-        // --- TARJETA DE CLIMA ACTUAL ---
         s.hoy?.let { climaActual ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -76,7 +81,6 @@ fun ClimaView(vm: ClimaViewModel, onCambiarCiudad: () -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Estado y Temperatura
                     Text(
                         text = climaActual.estado.replaceFirstChar { it.uppercase() },
                         fontSize = 24.sp,
@@ -88,7 +92,6 @@ fun ClimaView(vm: ClimaViewModel, onCambiarCiudad: () -> Unit) {
                         fontWeight = FontWeight.Bold
                     )
 
-                    // Humedad
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Outlined.WaterDrop,
@@ -103,8 +106,9 @@ fun ClimaView(vm: ClimaViewModel, onCambiarCiudad: () -> Unit) {
                         )
                     }
 
-                    // Botón de Compartir
-                    FilledTonalButton(onClick = { compartirPronostico(context, s.ciudad, s.hoy) }) {
+                    FilledTonalButton(
+                        onClick = { compartirPronostico(context, s.ciudad, s.hoy) }
+                    ) {
                         Icon(imageVector = Icons.Default.Share, contentDescription = "Compartir")
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Compartir")
@@ -113,8 +117,7 @@ fun ClimaView(vm: ClimaViewModel, onCambiarCiudad: () -> Unit) {
             }
         }
 
-        // --- PRONÓSTICO DIARIO ---
-        if(s.dias.isNotEmpty()){
+        if (s.dias.isNotEmpty()) {
             Spacer(modifier = Modifier.height(24.dp))
             Text(
                 "Próximos días",
@@ -131,10 +134,13 @@ fun ClimaView(vm: ClimaViewModel, onCambiarCiudad: () -> Unit) {
                 }
             }
         }
-        
-        // --- MENSAJE DE ERROR ---
+
         s.error?.let {
-            Text("Error: $it", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
+            Text(
+                "Error: $it",
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
     }
 }
@@ -156,7 +162,7 @@ fun PronosticoItem(dia: PronosticoDia) {
             Text(
                 text = dia.estado.replaceFirstChar { it.uppercase() },
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                 modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f)
             )
             Text(
                 text = "${dia.tempMax}° / ${dia.tempMin}°",
@@ -167,12 +173,15 @@ fun PronosticoItem(dia: PronosticoDia) {
     }
 }
 
-private fun compartirPronostico(context: android.content.Context, ciudad: Ciudad?, clima: ClimaActual?) {
+private fun compartirPronostico(
+    context: android.content.Context,
+    ciudad: Ciudad?,
+    clima: ClimaActual?
+) {
     if (ciudad == null || clima == null) return
 
     val condicion = clima.estado.replaceFirstChar { it.uppercase() }
 
-    // Texto a compartir, usando las propiedades correctas de ClimaActual
     val textoParaCompartir = """
         Pronóstico del tiempo para ${ciudad.name}:
         - Temperatura: ${clima.temperatura}°C

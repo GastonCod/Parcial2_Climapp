@@ -22,10 +22,22 @@ import com.istea.appdelclima.repository.modelos.Ciudad
 import com.istea.appdelclima.ui.theme.azulFondo
 import com.istea.appdelclima.ui.theme.azulFondoComponentes
 import com.istea.appdelclima.ui.theme.grisFondo
+import kotlinx.coroutines.flow.collect
 
 @Composable
-fun CiudadesView(vm: CiudadesViewModel, onSeleccionar: (Ciudad) -> Unit) {
-    val s by vm.estado
+fun CiudadesView(
+    vm: CiudadesViewModel,
+    onSeleccionar: (Ciudad) -> Unit
+) {
+    val s by vm.estado.collectAsState()
+
+    LaunchedEffect(Unit) {
+        vm.efectos.collect { efecto ->
+            when (efecto) {
+                is CiudadesEfecto.NavegarAClima -> onSeleccionar(efecto.ciudad)
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -41,8 +53,8 @@ fun CiudadesView(vm: CiudadesViewModel, onSeleccionar: (Ciudad) -> Unit) {
         ) {
             BarraBusqueda(
                 query = s.query,
-                onQueryChange = vm::onQueryChange,
-                onGeoClick = { vm.onClickGeo(onSeleccionar) }
+                onQueryChange = { vm.dispatch(CiudadesIntencion.Buscar(it)) },
+                onGeoClick = { vm.dispatch(CiudadesIntencion.ClickGeo) }
             )
         }
 
@@ -81,7 +93,7 @@ fun CiudadesView(vm: CiudadesViewModel, onSeleccionar: (Ciudad) -> Unit) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 12.dp, vertical = 2.dp)
-                            .clickable { onSeleccionar(c) },
+                            .clickable { vm.dispatch(CiudadesIntencion.CiudadClick(c)) },
                         shape = RoundedCornerShape(
                             topStart = if (isFirst) 16.dp else 0.dp,
                             topEnd = if (isFirst) 16.dp else 0.dp,
@@ -127,10 +139,14 @@ fun CiudadesView(vm: CiudadesViewModel, onSeleccionar: (Ciudad) -> Unit) {
             Text(
                 text = "Error: $it",
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier
+                    .padding(16.dp)
+                    .clickable { vm.dispatch(CiudadesIntencion.ErrorMostrado) }
             )
         }
     }
+
+    ProvideContextToVM(vm)
 }
 
 @Composable

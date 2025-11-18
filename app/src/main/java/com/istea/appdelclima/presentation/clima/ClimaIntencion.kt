@@ -1,2 +1,7 @@
 package com.istea.appdelclima.presentation.clima
-sealed interface ClimaIntencion { data object Cargar : ClimaIntencion }
+
+import com.istea.appdelclima.repository.modelos.Ciudad
+
+sealed interface ClimaIntencion {
+    data class Cargar(val ciudad: Ciudad) : ClimaIntencion
+}

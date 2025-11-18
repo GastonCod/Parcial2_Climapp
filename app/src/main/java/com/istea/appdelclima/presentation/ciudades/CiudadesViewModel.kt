@@ -9,61 +9,82 @@ import com.istea.appdelclima.repository.RepositorioPreferencias
 import com.istea.appdelclima.repository.modelos.Ciudad
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class CiudadesViewModel(
-    val repo: Repositorio,
+    private val repo: Repositorio,
     private val repositorioPreferencias: RepositorioPreferencias
 ) : ViewModel() {
 
-    var estado = androidx.compose.runtime.mutableStateOf(CiudadesEstado())
-        private set
+    // STATE
+    private val _estado = MutableStateFlow(CiudadesEstado())
+    val estado: StateFlow<CiudadesEstado> = _estado.asStateFlow()
+
+    // EFFECTS
+    private val _efectos = MutableSharedFlow<CiudadesEfecto>()
+    val efectos: SharedFlow<CiudadesEfecto> = _efectos.asSharedFlow()
 
     @SuppressLint("StaticFieldLeak")
     var currentContext: Context? = null
 
     private var job: Job? = null
 
-    fun onQueryChange(q: String) {
-        estado.value = estado.value.copy(query = q, cargando = true)
+    fun dispatch(intencion: CiudadesIntencion) {
+        when (intencion) {
+            is CiudadesIntencion.Buscar      -> manejarBusqueda(intencion.query)
+            CiudadesIntencion.ClickGeo       -> manejarGeo()
+            is CiudadesIntencion.CiudadClick -> manejarCiudadClick(intencion.ciudad)
+            CiudadesIntencion.ErrorMostrado  -> limpiarError()
+        }
+    }
+
+    private fun manejarBusqueda(q: String) {
+        _estado.update { it.copy(query = q, cargando = true, error = null) }
+
         job?.cancel()
         job = viewModelScope.launch {
             delay(250)
+
             runCatching { repo.buscarCiudades(q) }
-                .onSuccess {
-                    estado.value = estado.value.copy(
-                        cargando = false,
-                        resultados = it,
-                        error = null
-                    )
+                .onSuccess { ciudades ->
+                    _estado.update {
+                        it.copy(
+                            cargando = false,
+                            resultados = ciudades,
+                            error = null
+                        )
+                    }
                 }
                 .onFailure { e ->
-                    estado.value = estado.value.copy(
-                        cargando = false,
-                        error = e.message ?: "Error buscando ciudades"
-                    )
+                    _estado.update {
+                        it.copy(
+                            cargando = false,
+                            error = e.message ?: "Error buscando ciudades"
+                        )
+                    }
                 }
         }
     }
 
-    fun onCiudadSeleccionada(ciudad: Ciudad) {
+    private fun manejarCiudadClick(ciudad: Ciudad) {
         viewModelScope.launch {
             repositorioPreferencias.guardarCiudad(ciudad.name)
+
+            _efectos.emit(CiudadesEfecto.NavegarAClima(ciudad))
         }
     }
 
-    fun onClickGeo(
-        onSeleccionar: (Ciudad) -> Unit
-    ) {
-        println(">>> onClickGeo ejecutado")
-
+    private fun manejarGeo() {
         val ctx = currentContext
-        println(">>> Context = $ctx")
-
         if (ctx == null) {
-            estado.value = estado.value.copy(
-                error = "No hay contexto para leer ubicación"
-            )
+            _estado.update { it.copy(error = "No hay contexto para leer ubicación") }
             return
         }
 
@@ -73,18 +94,24 @@ class CiudadesViewModel(
                     val ciudad = repo.ciudadPorUbicacion(lat, lon)
 
                     if (ciudad != null) {
-                        onSeleccionar(ciudad)
+                        manejarCiudadClick(ciudad)
                     } else {
-                        estado.value = estado.value.copy(
-                            error = "No se encontró ciudad para tu ubicación"
-                        )
+                        _estado.update {
+                            it.copy(error = "No se encontró ciudad para tu ubicación")
+                        }
                     }
                 } catch (e: Exception) {
-                    estado.value = estado.value.copy(
-                        error = "Error al leer la ubicación del dispositivo: ${e.message}"
-                    )
+                    _estado.update {
+                        it.copy(
+                            error = "Error al leer la ubicación del dispositivo: ${e.message}"
+                        )
+                    }
                 }
             }
         }
+    }
+
+    private fun limpiarError() {
+        _estado.update { it.copy(error = null) }
     }
 }
