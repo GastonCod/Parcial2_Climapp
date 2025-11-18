@@ -68,4 +68,6 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
     implementation("io.ktor:ktor-client-logging:2.3.7")
     implementation("io.coil-kt:coil-compose:2.6.0")
+    testImplementation(libs.junit)
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
 }
