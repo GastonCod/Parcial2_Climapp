@@ -75,7 +75,7 @@ class MainActivity : ComponentActivity() {
 
                             composable("clima") {
                                 ClimaView(vmWeather) {
-                                    nav.popBackStack()
+                                    nav.navigate("ciudades") { popUpTo(0) }
                                 }
                             }
                         }
